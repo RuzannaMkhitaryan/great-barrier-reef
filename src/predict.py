@@ -1,0 +1,62 @@
+import argparse          # reading args from command line 
+import cv2                # computer vision library, used here to read images
+
+
+def preprocess_image(image):
+    """
+    PLACEHOLDER. Later, this section will contain the code
+    that converts the image into the format expected by the model 
+    (e.g., resizing, color normalization, etc. 
+    — B will specify these requirements when they provide the architecture).
+    For now, we simply return the image as is.
+    """
+    return image
+
+
+def run_prediction(image):
+    """
+    PLACEHOLDER. Later, this section will contain the code
+    that loads the model weights and
+    obtains the actual prediction (star coordinates).
+    For now, we return a fake result to
+    verify that the entire script works.
+    """
+    fake_result = [{"x": 100, "y": 150, "confidence": 0.87}]
+    return fake_result
+
+
+def format_output(predictions):
+    """
+    PLACEHOLDER. Later, this section will contain the code
+    that formats the prediction results for display.
+    For now, we simply print them in a basic format.
+    """
+    if not predictions:
+        print("No starfish detected.")
+    else:
+        print(f"Found {len(predictions)} starfish.")
+        for i, pred in enumerate(predictions, start=1):
+            print(f"  {i}. x={pred['x']}, y={pred['y']}, confidence={pred['confidence']}")
+
+
+def main():
+    # This section handles command-line arguments. The user can specify the image file to process
+    # by providing it as an argument when running the script, e.g., python predict.py --image foto.jpg
+    parser = argparse.ArgumentParser(description="Predict starfish on an image")
+    parser.add_argument("--image", type=str, required=True, help="Path to the image file")
+    args = parser.parse_args()
+
+    # Read the image from the specified file path using OpenCV. If the image cannot be opened (e.g., if the file does not exist or is not a valid image), an error message is printed and the program exits.
+    image = cv2.imread(args.image)
+
+    if image is None:
+        print(f"Error: Could not open file {args.image}")
+        return
+
+    processed = preprocess_image(image)
+    predictions = run_prediction(processed)
+    format_output(predictions)
+
+
+if __name__ == "__main__":
+    main()
