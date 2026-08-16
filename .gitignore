@@ -1,0 +1,23 @@
+Data
+data/
+*.jpg
+*.jpeg
+*.png.csv
+!sample_images/.jpg
+
+Model artifacts
+*.pt
+*.pth
+checkpoints/
+runs/
+wandb/
+
+Python
+pycache/
+*.pyc
+.ipynb_checkpoints/
+venv/
+.env
+
+OS
+.DS_Store
