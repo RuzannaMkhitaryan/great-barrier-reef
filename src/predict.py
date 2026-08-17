@@ -1,6 +1,6 @@
 import argparse          # reading args from command line 
 import cv2                # computer vision library, used here to read images
-
+import os            
 
 def preprocess_image(image):
     """
@@ -39,12 +39,32 @@ def format_output(predictions):
             print(f"  {i}. x={pred['x']}, y={pred['y']}, confidence={pred['confidence']}")
 
 
+def save_output(predictions, image_path):
+    """
+    Saving result in txt file near the script
+    We will use this to detect errors (Pillar 5) — will be the history 
+    of model using on dif images
+    """
+    output_filename = "prediction_results.txt"
+    with open(output_filename, "a") as f:
+        f.write(f"Image: {image_path}\n")
+        for pred in predictions:
+            f.write(f"  x={pred['x']}, y={pred['y']}, confidence={pred['confidence']}\n")
+        f.write("\n")
+    print(f"result also saved in {output_filename}")
+
+
 def main():
     # This section handles command-line arguments. The user can specify the image file to process
     # by providing it as an argument when running the script, e.g., python predict.py --image foto.jpg
     parser = argparse.ArgumentParser(description="Predict starfish on an image")
     parser.add_argument("--image", type=str, required=True, help="Path to the image file")
     args = parser.parse_args()
+
+    #checking if file excisits 
+    if not os.path.exists(args.image):
+        print(f"Error: file wasnt find in the path {args.image}")
+        return
 
     # Read the image from the specified file path using OpenCV. If the image cannot be opened (e.g., if the file does not exist or is not a valid image), an error message is printed and the program exits.
     image = cv2.imread(args.image)
@@ -56,6 +76,8 @@ def main():
     processed = preprocess_image(image)
     predictions = run_prediction(processed)
     format_output(predictions)
+    save_output(predictions, args.image)
+
 
 
 if __name__ == "__main__":

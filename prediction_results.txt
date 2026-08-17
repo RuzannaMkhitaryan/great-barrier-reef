@@ -1,0 +1,3 @@
+Image: C:\Users\evaar\OneDrive\Desktop\animal-8839173_640.jpg
+  x=100, y=150, confidence=0.87
+
