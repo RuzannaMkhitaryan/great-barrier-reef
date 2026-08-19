@@ -1,6 +1,12 @@
 import argparse          # reading args from command line 
 import cv2                # computer vision library, used here to read images
 import os            
+from ultralytics import YOLO
+
+#PATH IS FAKE
+MODEL_PATH = "outputs/best.pt"
+model = YOLO(MODEL_PATH)
+
 
 def preprocess_image(image):
     """
@@ -15,14 +21,24 @@ def preprocess_image(image):
 
 def run_prediction(image):
     """
-    PLACEHOLDER. Later, this section will contain the code
+    PLACEHOLDER. this section will contain the code
     that loads the model weights and
     obtains the actual prediction (star coordinates).
     For now, we return a fake result to
     verify that the entire script works.
     """
-    fake_result = [{"x": 100, "y": 150, "confidence": 0.87}]
-    return fake_result
+    results = model(image)
+    predictions = []
+    for r in results:
+        for box in r.boxes:
+            x_center, y_center, w, h = box.xywh[0].tolist()
+            conf = box.conf[0].item()
+            predictions.append({
+                "x": round(x_center, 1),
+                "y": round(y_center, 1),
+                "confidence": round(conf, 3)
+            })
+    return predictions
 
 
 def format_output(predictions):
