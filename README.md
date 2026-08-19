@@ -300,7 +300,42 @@ Sequence-Level Train / Val Split
       Validation Metrics
      mAP@50 / mAP@50–95
 ```
+## Baseline Model
 
+After selecting a negative-to-positive ratio of `2.0`, a baseline YOLOv8n model was trained using the fixed sequence-level train/validation split.
+
+### Configuration
+
+- Model: YOLOv8n
+- Pretrained weights: Yes (`yolov8n.pt`)
+- Negative ratio: `2.0`
+- Training frames: 12,846
+- Validation frames: 4,057
+- Image size: 320
+- Batch size: 32
+- Epochs: 20
+- Random seed: 42
+- Optimizer: AdamW (automatically selected by Ultralytics)
+- Learning rate: 0.002
+
+### Baseline Results
+
+| Metric | Score |
+|---|---:|
+| mAP@50 | 0.0508 |
+| mAP@50-95 | 0.0252 |
+
+The model checkpoint corresponding to the best validation performance was saved as `best.pt`.
+
+### Baseline Checkpoint
+
+The baseline model's best checkpoint (`best.pt`) is available in Google Drive:
+
+[Baseline checkpoint folder](https://drive.google.com/drive/folders/1xf0_AAXmX-Zf0HHk1QR14CI8TpzXakV4?usp=sharing)
+
+This checkpoint can be used by other team members for inference, comparison with later experiments, or as a starting point for further model development.
+
+The baseline model is intended as a reference configuration. Later experiments can compare changes in image resolution, model size, optimizer settings, learning rate, augmentation, and other hyperparameters against this baseline.
 ## Next Steps
 
 * Re-evaluate the strongest negative-frame configurations (`ratio=None` and `ratio=2.0`) with longer training.
