@@ -21,11 +21,9 @@ def preprocess_image(image):
 
 def run_prediction(image):
     """
-    PLACEHOLDER. this section will contain the code
+    this section contains the code
     that loads the model weights and
-    obtains the actual prediction (star coordinates).
-    For now, we return a fake result to
-    verify that the entire script works.
+    obtains the actual prediction (star coordinates)
     """
     results = model(image)
     predictions = []
@@ -43,9 +41,8 @@ def run_prediction(image):
 
 def format_output(predictions):
     """
-    PLACEHOLDER. Later, this section will contain the code
+    This section contains the code
     that formats the prediction results for display.
-    For now, we simply print them in a basic format.
     """
     if not predictions:
         print("No starfish detected.")
