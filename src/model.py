@@ -42,6 +42,7 @@ def get_train_config(
     patience=20,
     optimizer="SGD",
     device=None,
+    save_period=-1,
     mosaic=1.0,
     mixup=0.1,
     copy_paste=0.1,
@@ -73,6 +74,11 @@ def get_train_config(
     device: pass a list like [0, 1] to use both GPUs on a Kaggle T4x2
     session. Defaults to None (Ultralytics auto-selects a single device).
 
+    save_period: save a checkpoint (epochN.pt) every N epochs, in addition
+    to the usual last.pt/best.pt. Defaults to -1 (disabled). Set this to a
+    positive number for any run long enough that you'd want to resume it
+    after an interruption instead of losing the whole run.
+
     mosaic / mixup / copy_paste / hsv_*: augmentation tuned for a small,
     sparse, underwater object - copy_paste and mixup oversample the rare
     positive examples, hsv_* accounts for underwater color cast.
@@ -85,6 +91,7 @@ def get_train_config(
         "patience": patience,
         "optimizer": optimizer,
         "device": device,
+        "save_period": save_period,
         "mosaic": mosaic,
         "mixup": mixup,
         "copy_paste": copy_paste,
