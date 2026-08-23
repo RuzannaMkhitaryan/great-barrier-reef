@@ -1,23 +1,24 @@
-Data
+# Data
 data/
 *.jpg
 *.jpeg
-*.png.csv
-!sample_images/.jpg
+*.png
+*.csv
+!sample_images/*.jpg
 
-Model artifacts
+# Model artifacts
 *.pt
 *.pth
 checkpoints/
 runs/
 wandb/
 
-Python
-pycache/
+# Python
+__pycache__/
 *.pyc
 .ipynb_checkpoints/
 venv/
 .env
 
-OS
+# OS
 .DS_Store
