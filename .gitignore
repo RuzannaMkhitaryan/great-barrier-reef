@@ -7,7 +7,6 @@ data/
 !sample_images/*.jpg
 
 # Model artifacts
-*.pt
 *.pth
 checkpoints/
 runs/
