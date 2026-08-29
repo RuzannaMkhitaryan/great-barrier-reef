@@ -206,11 +206,11 @@ great-barrier-reef/
 │   ├── dataset.py
 │   ├── metrics.py
 │   ├── model.py
-│   ├── predict.py
-│   └── train.py
+│   └── predict.py
 │
 ├── .gitignore
 ├── README.md
+├── data_pipeline.md
 └── requirements.txt
 ```
 
