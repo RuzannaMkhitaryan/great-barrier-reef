@@ -1,348 +1,234 @@
-## Data & EDA Findings
+# Great Barrier Reef — Crown-of-Thorns Starfish Detection
 
-**Dataset:** TensorFlow — Help Protect the Great Barrier Reef, focused on crown-of-thorns starfish detection in underwater video frames.
+A team-based computer vision project for detecting **crown-of-thorns starfish (COTS)** in underwater images using YOLO object detection.
 
-Full exploratory analysis is available in [`notebooks/eda.ipynb`](notebooks/eda.ipynb).
+The project is based on the Kaggle **TensorFlow — Help Protect the Great Barrier Reef** competition dataset:
 
-### Key EDA Findings
+https://www.kaggle.com/competitions/tensorflow-great-barrier-reef
 
-* **23,501 total frames** across **3 videos** and **20 sequences**.
-* **79.1% of frames contain no annotated starfish**, resulting in substantial class imbalance.
-* The three videos have noticeably different empty-frame rates:
+The workflow covers exploratory data analysis, dataset preparation, model experimentation, training, evaluation, and inference.
 
-  * Video 0: **68.1%**
-  * Video 1: **74.5%**
-  * Video 2: **92.1%**
-* Sequence counts also differ between videos:
+## Dataset & EDA
 
-  * Video 0: **8 sequences**
-  * Video 1: **8 sequences**
-  * Video 2: **4 sequences**
-* No duplicate `image_id` values were found.
-* No missing image files were detected.
-* Sampled images were confirmed to have a resolution of **1280 × 720**.
+Exploratory data analysis is available in:
 
-These findings influenced both the train/validation splitting strategy and the decision to experiment with different amounts of negative/background training frames.
+```text
+notebooks/eda.ipynb
+```
 
----
+Main findings:
+
+* **23,501** total image frames
+* **3 videos** and **20 sequences**
+* About **79.1%** of frames contain no annotated starfish
+* Images have a resolution of **1280 × 720**
+* No duplicate `image_id` values or missing image files were found
+
+The large number of empty frames motivated experiments with different amounts of negative/background training data.
 
 ## Train / Validation Split
 
-The canonical split is generated in:
+The train/validation split is created in:
 
 ```text
 notebooks/train_val_split.ipynb
 ```
 
-and saved as:
+and stored in:
 
 ```text
 data/splits.csv
 ```
 
-### Why Sequence-Level Splitting?
+Frames are split at the **sequence level** rather than randomly. Frames from the same underwater sequence are visually and temporally related, so random frame-level splitting could cause very similar images to appear in both training and validation sets.
 
-Frames from the same video sequence are temporally related and may be near-duplicates. Randomly splitting individual frames could therefore place very similar images in both training and validation sets, causing data leakage.
+`GroupShuffleSplit` is used to keep complete sequences together.
 
-To prevent this, complete sequences are kept entirely on one side:
-
-```text
-Sequence A → Train
-Sequence B → Train
-Sequence C → Validation
-```
-
-Each video is processed separately so that all three videos are represented in both training and validation data.
-
-### Split Selection
-
-For each video, multiple candidate sequence-level splits are generated using `GroupShuffleSplit`.
-
-The current implementation tests **500 candidate splits** and selects the candidate that best balances:
-
-1. closeness to the desired **20% validation size**;
-2. similarity between the validation empty-frame rate and the full video's empty-frame rate.
-
-Because complete sequences must remain together, perfect balancing is not always possible, especially for Video 2, which contains only four sequences.
-
-### Final Split
+Final split:
 
 ```text
 Train: 19,444 frames
-Val:    4,057 frames
+Validation: 4,057 frames
 ```
 
-Per-video distribution:
-
-```text
-          train   val
-Video 0    5430  1278
-Video 1    6978  1254
-Video 2    7036  1525
-```
-
-Empty-frame distribution:
-
-```text
-          train   val   full
-Video 0    68.0  68.1   68.1
-Video 1    72.8  84.1   74.5
-Video 2    90.8  98.1   92.1
-```
-
-Integrity checks verify that:
-
-* no sequence appears in both train and validation;
-* no `image_id` appears in both sets;
-* every original frame is included exactly once.
-
-The resulting `data/splits.csv` contains:
-
-```text
-image_id, video_id, sequence, split
-```
-
-and serves as the canonical train/validation membership used by downstream preprocessing and training code.
-
----
+The validation set remains unchanged across experiments to allow fair model comparison.
 
 ## Dataset Preparation
 
-YOLO dataset preparation is implemented in:
+Dataset preparation is implemented in:
 
 ```text
-notebooks/dataset.py
+src/dataset.py
 ```
 
-The script:
+The pipeline:
 
-1. loads the original Kaggle `train.csv`;
-2. parses the annotation column;
-3. merges the annotations with `data/splits.csv`;
-4. marks frames as positive or negative;
-5. optionally downsamples negative **training** frames;
-6. converts COCO-style bounding boxes to YOLO format;
-7. clips bounding boxes to valid image boundaries;
-8. creates YOLO `.txt` label files;
-9. creates symbolic links to the original images;
-10. generates `data/data.yaml`.
+1. Loads the original Kaggle annotations
+2. Merges them with the fixed train/validation split
+3. Identifies positive and negative frames
+4. Optionally downsamples negative training frames
+5. Converts COCO bounding boxes to normalized YOLO format
+6. Creates YOLO label files
+7. Links images into train/validation directories
+8. Generates `data.yaml`
 
-The validation set is **never downsampled**, ensuring that all experiments are evaluated on the same fixed validation distribution.
-
-### Negative-Frame Sampling
-
-The training pipeline supports different negative-to-positive ratios:
-
-```text
-ratio = 0.0
-→ keep no negative frames
-
-ratio = 1.0
-→ keep at most 1 negative frame per positive frame
-
-ratio = 2.0
-→ keep at most 2 negative frames per positive frame
-
-ratio = None
-→ keep all available negative frames
-```
-
-Sampling uses a fixed random seed for reproducibility.
-
-### Bounding-Box Conversion
-
-Original annotations are provided in COCO-style format:
-
-```text
-x, y, width, height
-```
-
-They are converted into normalized YOLO format:
-
-```text
-class_id x_center y_center width height
-```
-
-There is only one object class:
+There is one detection class:
 
 ```text
 0 → starfish
 ```
 
-Bounding boxes extending outside image boundaries are clipped before conversion. Invalid or zero-area boxes are ignored.
+## Negative-Frame Experiments
 
-Negative frames receive empty YOLO label files.
-
----
-
-## Generated YOLO Dataset
-
-Dataset preparation creates the following structure:
+Because most frames contain no starfish, different negative-to-positive training ratios were tested with **YOLOv8n** in:
 
 ```text
-data/
-├── images/
-│   ├── train/
-│   └── val/
-│
-├── labels/
-│   ├── train/
-│   └── val/
-│
-├── data.yaml
-└── splits.csv
+notebooks/train-yolov8n.ipynb
 ```
 
-The image directories contain symbolic links rather than duplicated image files.
+| Negative ratio | Description                    |     mAP@50 |  mAP@50–95 |
+| -------------- | ------------------------------ | ---------: | ---------: |
+| `0.0`          | Positive frames only           |     0.0084 |     0.0022 |
+| `1.0`          | Up to 1 negative per positive  |     0.0205 |     0.0101 |
+| `2.0`          | Up to 2 negatives per positive |     0.0495 |     0.0212 |
+| `all`          | All available negatives        | **0.0600** | **0.0257** |
 
-`data.yaml` defines the YOLO dataset configuration:
+These preliminary experiments showed that including background examples significantly improved detection performance.
 
-```yaml
-train: path/to/data/images/train
-val: path/to/data/images/val
-
-nc: 1
-names: ['starfish']
-```
-
----
-
-## Preliminary YOLOv8 Experiments
-
-Initial experiments are implemented in:
-
-```text
-notebooks/train.ipynb
-```
-
-A lightweight pretrained **YOLOv8n** model is used to evaluate the effect of negative/background frames.
-
-The following negative-to-positive configurations were tested:
-
-```text
-0.0
-1.0
-2.0
-all negatives
-```
-
-For every experiment, the pipeline:
-
-```text
-Clean previous generated YOLO dataset
-        ↓
-Load train.csv + splits.csv
-        ↓
-Use the same fixed train/validation split
-        ↓
-Downsample training negatives according to ratio
-        ↓
-Generate YOLO labels and image links
-        ↓
-Generate data.yaml
-        ↓
-Initialize a fresh YOLOv8n model
-        ↓
-Train
-        ↓
-Evaluate on the unchanged validation set
-```
-
-### Preliminary Results
-
-| Negative Ratio | Training Data                    |     mAP@50 |  mAP@50–95 |
-| -------------- | -------------------------------- | ---------: | ---------: |
-| `0.0`          | Positive frames only             |     0.0084 |     0.0022 |
-| `1.0`          | Up to 1 negative per positive    |     0.0205 |     0.0101 |
-| `2.0`          | Up to 2 negatives per positive   |     0.0495 |     0.0212 |
-| `all`          | All available training negatives | **0.0600** | **0.0257** |
-
-The preliminary results show a consistent improvement as more negative/background frames are included.
-
-Therefore, **all negatives (`ratio=None`) currently provide the best preliminary result**, while `ratio=2.0` remains a useful candidate when faster experimentation is needed.
-
-These results were obtained using short training runs and should not yet be considered final model-selection results.
-
----
-
-## Current Data Pipeline
-
-```text
-Kaggle train.csv + train_images/
-            │
-            ▼
-        EDA
-   notebooks/eda.ipynb
-            │
-            ▼
-Sequence-Level Train / Val Split
- notebooks/train_val_split.ipynb
-            │
-            ▼
-      data/splits.csv
-            │
-            ▼
-     Dataset Preparation
-    notebooks/dataset.py
-            │
-            ├── split assignment
-            ├── negative sampling
-            ├── COCO → YOLO conversion
-            ├── YOLO labels
-            ├── image symlinks
-            └── data.yaml
-            │
-            ▼
-      YOLOv8 Training
-    notebooks/train.ipynb
-            │
-            ▼
-      Validation Metrics
-     mAP@50 / mAP@50–95
-```
 ## Baseline Model
 
-After selecting a negative-to-positive ratio of `2.0`, a baseline YOLOv8n model was trained using the fixed sequence-level train/validation split.
+A YOLOv8n baseline was trained using a negative ratio of `2.0`.
 
-### Configuration
+Main configuration:
 
-- Model: YOLOv8n
-- Pretrained weights: Yes (`yolov8n.pt`)
-- Negative ratio: `2.0`
-- Training frames: 12,846
-- Validation frames: 4,057
-- Image size: 320
-- Batch size: 32
-- Epochs: 20
-- Random seed: 42
-- Optimizer: AdamW (automatically selected by Ultralytics)
-- Learning rate: 0.002
+* Model: **YOLOv8n**
+* Image size: **320**
+* Batch size: **32**
+* Epochs: **20**
+* Training frames: **12,846**
+* Validation frames: **4,057**
 
-### Baseline Results
+Baseline results:
 
-| Metric | Score |
-|---|---:|
-| mAP@50 | 0.0508 |
-| mAP@50-95 | 0.0252 |
+| Metric    |  Score |
+| --------- | -----: |
+| mAP@50    | 0.0508 |
+| mAP@50–95 | 0.0252 |
 
-The model checkpoint corresponding to the best validation performance was saved as `best.pt`.
+The full baseline experiment is available in:
 
-### Baseline Checkpoint
+```text
+notebooks/baseline_model.ipynb
+```
+## Baseline Checkpoint
 
-The baseline model's best checkpoint (`best.pt`) is available in Google Drive:
+The baseline YOLOv8n model checkpoint (`best.pt`) is stored externally because model weight files are not tracked in this repository.
 
 [Baseline checkpoint folder](https://drive.google.com/drive/folders/1xf0_AAXmX-Zf0HHk1QR14CI8TpzXakV4?usp=sharing)
 
-This checkpoint can be used by other team members for inference, comparison with later experiments, or as a starting point for further model development.
+The checkpoint can be used for inference and comparison with the final YOLO11s model.
 
-The baseline model is intended as a reference configuration. Later experiments can compare changes in image resolution, model size, optimizer settings, learning rate, augmentation, and other hyperparameters against this baseline.
-## Next Steps
+## Final Model
 
-* Re-evaluate the strongest negative-frame configurations (`ratio=None` and `ratio=2.0`) with longer training.
-* Increase training resolution from the preliminary `320` setting, starting with `640`.
-* Increase the number of training epochs and use early stopping where appropriate.
-* Use fixed training seeds for more reproducible model comparisons.
-* Track additional metrics such as precision and recall.
-* Perform visual error analysis on false positives, false negatives, and difficult small-starﬁsh examples.
-* Compare model and training configurations before selecting the final model.
-* Build the final inference pipeline for unseen video frames.
+After the initial YOLOv8 experiments, the project moved to **YOLO11s**, which provides greater model capacity for detecting small COTS in underwater scenes.
+
+Final-model training is documented in:
+
+```text
+notebooks/train-final-model-yolo11s.ipynb
+```
+
+The reusable model configuration is defined in:
+
+```text
+src/model.py
+```
+
+The current configuration uses transfer learning with pretrained YOLO11s weights, higher-resolution input, early stopping, and image augmentation.
+
+## Evaluation
+
+The **main evaluation metric for this project is F2 score**.
+
+F2 gives more weight to **recall** than precision, which is useful for this task because missing an actual starfish detection is especially important.
+
+Additional metrics include:
+
+* Precision
+* Recall
+* mAP@50
+* mAP@50–95
+
+F2 calculation and metric processing are implemented in:
+
+```text
+src/metrics.py
+```
+
+### Final Results
+
+| Metric | Score |
+|---|---:|
+| **F2** | **0.603** |
+| Precision | 0.877 |
+| Recall | 0.559 |
+| mAP@50 | 0.619 |
+| mAP@50–95 | 0.359 |
+
+## Prediction
+
+Inference on new images is implemented in:
+
+```text
+src/predict.py
+```
+
+The script loads the trained model, detects COTS, saves an image with predicted bounding boxes, and records detection coordinates and confidence scores.
+
+Generated prediction logs and model checkpoints are not tracked in Git.
+
+## Project Structure
+
+```text
+great-barrier-reef/
+│
+├── data/
+│   └── splits.csv
+│
+├── notebooks/
+│   ├── eda.ipynb
+│   ├── train_val_split.ipynb
+│   ├── train-yolov8n.ipynb
+│   ├── baseline_model.ipynb
+│   └── train-final-model-yolo11s.ipynb
+│
+├── src/
+│   ├── dataset.py
+│   ├── metrics.py
+│   ├── model.py
+│   ├── predict.py
+│   └── train.py
+│
+├── .gitignore
+├── README.md
+└── requirements.txt
+```
+
+## Installation
+
+Install the required dependencies with:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Technologies
+
+* Python
+* PyTorch
+* Ultralytics YOLO
+* Pandas / NumPy
+* OpenCV
+* scikit-learn
+* Matplotlib
+* Jupyter / Google Colab
