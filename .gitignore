@@ -22,3 +22,6 @@ venv/
 
 # OS
 .DS_Store
+
+# log data
+prediction_results.txt
