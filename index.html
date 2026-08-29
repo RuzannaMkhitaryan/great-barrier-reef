@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COTS-DETECT // Crown-of-Thorns Starfish Detection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#071620;
+    --deep:#0F3B3E;
+    --panel:#0C2830;
+    --reef:#1FA097;
+    --reef-dim:#155a54;
+    --coral:#FF6B4A;
+    --coral-dim:#7a3527;
+    --foam:#E8F3F0;
+    --slate:#7C97A0;
+    --line: rgba(232,243,240,0.10);
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--abyss);
+    color:var(--foam);
+    font-family:'Inter', sans-serif;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--coral); color:var(--abyss);}
+
+  h1,h2,h3{font-family:'Space Grotesk', sans-serif; font-weight:600; letter-spacing:-0.01em;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+
+  a{color:var(--reef);}
+
+  .wrap{max-width:1080px; margin:0 auto; padding:0 28px;}
+
+  /* ---------- background texture ---------- */
+  body{
+    background-image:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(31,160,151,0.16), transparent 60%),
+      radial-gradient(ellipse 700px 500px at 100% 10%, rgba(255,107,74,0.08), transparent 55%);
+    background-attachment:fixed;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky; top:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 28px;
+    background:rgba(7,22,32,0.82);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar .mark{display:flex; align-items:center; gap:10px; font-family:'Space Grotesk'; font-weight:700; font-size:15px; letter-spacing:0.02em;}
+  .mark .dot{width:8px; height:8px; border-radius:50%; background:var(--coral); box-shadow:0 0 10px 2px rgba(255,107,74,0.6); animation:pulse 2.4s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;} 50%{opacity:0.35;}}
+  .topbar nav{display:flex; gap:26px; font-size:13px;}
+  .topbar nav a{color:var(--slate); text-decoration:none; font-family:'JetBrains Mono'; letter-spacing:0.02em;}
+  .topbar nav a:hover{color:var(--foam);}
+
+  /* ---------- hero ---------- */
+  .hero{padding:88px 0 64px; position:relative;}
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:'JetBrains Mono'; font-size:12px; color:var(--reef);
+    border:1px solid var(--reef-dim); padding:5px 12px; border-radius:100px;
+    margin-bottom:26px; letter-spacing:0.04em;
+  }
+  .hero h1{
+    font-size:clamp(34px, 5.4vw, 58px);
+    line-height:1.06;
+    max-width:15ch;
+    margin-bottom:22px;
+  }
+  .hero h1 em{font-style:normal; color:var(--reef);}
+  .hero .lede{color:var(--slate); font-size:17px; max-width:56ch; margin-bottom:40px;}
+
+  .hero-grid{
+    display:grid; grid-template-columns:1.1fr 1fr; gap:40px; align-items:center;
+    margin-top:20px;
+  }
+  @media (max-width:860px){.hero-grid{grid-template-columns:1fr;}}
+
+  .stat-row{display:flex; gap:34px; flex-wrap:wrap; margin-bottom:8px;}
+  .stat{border-left:2px solid var(--reef-dim); padding-left:14px;}
+  .stat .num{font-family:'JetBrains Mono'; font-weight:700; font-size:30px; color:var(--foam);}
+  .stat .num span{color:var(--reef); font-size:16px;}
+  .stat .label{font-size:12px; color:var(--slate); text-transform:uppercase; letter-spacing:0.06em; margin-top:2px;}
+
+  /* ---------- scanner signature element ---------- */
+  .scanner{
+    position:relative; aspect-ratio:4/3; border-radius:10px; overflow:hidden;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(31,160,151,0.35), transparent 55%),
+      linear-gradient(160deg, #0a2a30 0%, #082026 55%, #061419 100%);
+    border:1px solid var(--line);
+  }
+  .scanner::before{ /* seabed texture blobs */
+    content:''; position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 20% 78%, rgba(28,90,84,0.55) 0 60px, transparent 61px),
+      radial-gradient(circle at 55% 85%, rgba(28,90,84,0.45) 0 44px, transparent 45px),
+      radial-gradient(circle at 78% 74%, rgba(28,90,84,0.5) 0 70px, transparent 71px),
+      radial-gradient(circle at 40% 92%, rgba(28,90,84,0.4) 0 38px, transparent 39px);
+    opacity:0.9;
+  }
+  .scan-line{
+    position:absolute; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, var(--reef), transparent);
+    box-shadow:0 0 16px 3px rgba(31,160,151,0.6);
+    animation:sweep 3.6s ease-in-out infinite;
+  }
+  @keyframes sweep{
+    0%{top:8%; opacity:0;} 8%{opacity:1;} 92%{opacity:1;} 100%{top:92%; opacity:0;}
+  }
+  .grid-overlay{
+    position:absolute; inset:0;
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0 39px, rgba(232,243,240,0.045) 39px 40px),
+      repeating-linear-gradient(90deg, transparent 0 39px, rgba(232,243,240,0.045) 39px 40px);
+  }
+  .bbox{
+    position:absolute; border:2px solid var(--coral); border-radius:2px;
+    top:38%; left:44%; width:14%; height:12%;
+    box-shadow:0 0 0 3px rgba(255,107,74,0.12);
+    animation:lock 3.6s ease-in-out infinite;
+  }
+  @keyframes lock{
+    0%,20%{opacity:0; transform:scale(1.4);}
+    28%{opacity:1; transform:scale(1);}
+    82%{opacity:1;}
+    92%,100%{opacity:0;}
+  }
+  .bbox::after{
+    content:'starfish 0.91'; position:absolute; top:-22px; left:-2px;
+    font-family:'JetBrains Mono'; font-size:10px; background:var(--coral); color:var(--abyss);
+    padding:2px 6px; border-radius:2px; white-space:nowrap; font-weight:700;
+  }
+  .scanner .readout{
+    position:absolute; bottom:12px; left:12px; right:12px;
+    display:flex; justify-content:space-between; align-items:flex-end;
+    font-family:'JetBrains Mono'; font-size:10px; color:var(--slate); letter-spacing:0.04em;
+  }
+  .readout .rec{color:var(--coral); display:flex; align-items:center; gap:6px;}
+  .readout .rec .dot{width:6px; height:6px; border-radius:50%; background:var(--coral); animation:pulse 1.2s ease-in-out infinite;}
+
+  /* ---------- section frame ---------- */
+  section.pillar{padding:72px 0; border-top:1px solid var(--line);}
+  .frame-tag{
+    font-family:'JetBrains Mono'; font-size:12px; color:var(--coral);
+    letter-spacing:0.08em; margin-bottom:14px; display:block;
+  }
+  .pillar h2{font-size:clamp(24px,3vw,32px); margin-bottom:16px; max-width:20ch;}
+  .pillar .intro{color:var(--slate); max-width:62ch; margin-bottom:36px; font-size:15.5px;}
+
+  .two-col{display:grid; grid-template-columns:1fr 1fr; gap:32px;}
+  @media (max-width:800px){.two-col{grid-template-columns:1fr;}}
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:24px;
+  }
+  .card h3{font-size:14px; text-transform:uppercase; letter-spacing:0.06em; color:var(--reef); margin-bottom:16px; font-family:'JetBrains Mono'; font-weight:500;}
+
+  /* bar chart (css only) */
+  .bars{display:flex; flex-direction:column; gap:14px;}
+  .bar-row{display:grid; grid-template-columns:120px 1fr 64px; align-items:center; gap:10px;}
+  .bar-row .bl{font-family:'JetBrains Mono'; font-size:12px; color:var(--slate);}
+  .bar-track{height:10px; background:rgba(255,255,255,0.06); border-radius:6px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:6px; background:linear-gradient(90deg, var(--reef-dim), var(--reef));}
+  .bar-fill.coral{background:linear-gradient(90deg, var(--coral-dim), var(--coral));}
+  .bar-row .bv{font-family:'JetBrains Mono'; font-size:12px; text-align:right; color:var(--foam);}
+
+  .kv-list{display:flex; flex-direction:column; gap:10px;}
+  .kv{display:flex; justify-content:space-between; font-size:13.5px; padding-bottom:10px; border-bottom:1px dashed var(--line);}
+  .kv:last-child{border-bottom:none; padding-bottom:0;}
+  .kv .k{color:var(--slate);}
+  .kv .v{font-family:'JetBrains Mono'; color:var(--foam);}
+
+  .imgph{
+    aspect-ratio:16/10; border-radius:8px; border:1.5px dashed var(--reef-dim);
+    background:rgba(31,160,151,0.04);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+    color:var(--slate); font-family:'JetBrains Mono'; font-size:11.5px; text-align:center; padding:16px;
+    overflow:hidden;
+  }
+  .imgph .tag{color:var(--reef); font-weight:700;}
+  .imgph:has(img){padding:0; border-style:solid; aspect-ratio:auto;}
+  .imgph img{
+    width:100%; height:auto; object-fit:contain; display:block; border-radius:7px;
+  }
+  .full-img-card{grid-column:1 / -1; margin-top:24px;}
+  .img-caption{font-family:'JetBrains Mono'; font-size:11px; color:var(--slate); text-align:center; margin-top:8px;}
+
+  .pillbar{display:flex; gap:8px; flex-wrap:wrap; margin-top:18px;}
+  .pill{font-family:'JetBrains Mono'; font-size:11px; color:var(--slate); border:1px solid var(--line); padding:4px 10px; border-radius:100px;}
+
+  .callout{
+    border-left:3px solid var(--coral); background:rgba(255,107,74,0.06);
+    padding:16px 20px; border-radius:0 8px 8px 0; font-size:14.5px; color:var(--foam); margin-top:20px;
+  }
+  .callout b{color:var(--coral);}
+
+  table.data{width:100%; border-collapse:collapse; font-size:13px;}
+  table.data th{
+    text-align:left; font-family:'JetBrains Mono'; font-weight:500; color:var(--slate);
+    text-transform:uppercase; font-size:11px; letter-spacing:0.05em; padding:8px 10px; border-bottom:1px solid var(--line);
+  }
+  table.data td{padding:9px 10px; border-bottom:1px solid var(--line); font-family:'JetBrains Mono';}
+  table.data tr.hl td{color:var(--reef); font-weight:700;}
+  table.data tr:last-child td{border-bottom:none;}
+
+  .split-viz{display:flex; height:34px; border-radius:6px; overflow:hidden; margin:14px 0;}
+  .split-viz div{display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono'; font-size:11px;}
+
+  /* ---------- confusion mini ---------- */
+  .conf-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px; max-width:280px;}
+  .conf-cell{aspect-ratio:1; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:'JetBrains Mono';}
+  .conf-cell .pct{font-size:22px; font-weight:700;}
+  .conf-cell .lbl{font-size:10px; color:var(--slate); margin-top:4px; text-align:center;}
+
+  /* ---------- footer / team ---------- */
+  footer{padding:64px 0 80px; border-top:1px solid var(--line);}
+  .team{display:flex; gap:40px; flex-wrap:wrap; margin:28px 0 40px;}
+  .member{font-family:'JetBrains Mono'; font-size:13px;}
+  .member .role{color:var(--reef); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;}
+  .repo-link{
+    display:inline-flex; align-items:center; gap:8px; font-family:'JetBrains Mono'; font-size:13px;
+    color:var(--foam); text-decoration:none; border:1px solid var(--line); padding:10px 16px; border-radius:8px;
+  }
+  .repo-link:hover{border-color:var(--reef);}
+  .fine{color:var(--slate); font-size:12px; margin-top:30px;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="mark"><span class="dot"></span> COTS&#8209;DETECT</div>
+  <nav>
+    <a href="#data">Data</a>
+    <a href="#preprocessing">Preprocessing</a>
+    <a href="#baseline">Baseline</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#results">Results</a>
+    <a href="#try-it">Try it</a>
+  </nav>
+</div>
+
+<header class="hero wrap">
+  <span class="eyebrow">&#9673; Great Barrier Reef &middot; Object Detection</span>
+  <h1>Finding <em>crown&#8209;of&#8209;thorns starfish</em> in 23,501 frames of open water.</h1>
+  <p class="lede">A YOLO-based detection pipeline trained to spot a coral-eating predator across three dive videos &mdash; built, broken, and rebuilt over an 11-day sprint.</p>
+
+  <div class="hero-grid">
+    <div>
+      <div class="stat-row">
+        <div class="stat">
+          <div class="num">0.619</div>
+          <div class="label">Val mAP50</div>
+        </div>
+        <div class="stat">
+          <div class="num">12<span>&times;</span></div>
+          <div class="label">vs. baseline</div>
+        </div>
+        <div class="stat">
+          <div class="num">0.360</div>
+          <div class="label">Val mAP50&#8209;95</div>
+        </div>
+      </div>
+      <p style="color:var(--slate); font-size:13.5px; margin-top:18px;">YOLO11s &middot; 1280px &middot; trained to epoch 44, early&#8209;stopped from patience&#8209;10</p>
+    </div>
+
+    <div class="scanner">
+      <div class="grid-overlay"></div>
+      <div class="scan-line"></div>
+      <div class="bbox"></div>
+      <div class="readout">
+        <span>FRAME 0&#8209;1013 &middot; VIDEO_0</span>
+        <span class="rec"><span class="dot"></span>DETECTING</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="pillar" id="data">
+  <div class="wrap">
+    <span class="frame-tag">FRAME_001</span>
+    <h2>The problem & the data</h2>
+    <p class="intro">Crown-of-thorns starfish overpopulate and strip reefs bare. Researchers need a way to count them automatically from underwater survey footage &mdash; which means finding a small, often camouflaged animal in frames that are, overwhelmingly, just water and coral.</p>
+
+    <div class="two-col">
+      <div class="card">
+        <h3>Dataset shape</h3>
+        <div class="kv-list">
+          <div class="kv"><span class="k">Total frames</span><span class="v">23,501</span></div>
+          <div class="kv"><span class="k">Source videos</span><span class="v">3</span></div>
+          <div class="kv"><span class="k">Unique sequences</span><span class="v">20</span></div>
+          <div class="kv"><span class="k">Frames with starfish</span><span class="v">20.9%</span></div>
+          <div class="kv"><span class="k">Empty (background) frames</span><span class="v">79.1%</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Empty-frame rate by video</h3>
+        <div class="bars">
+          <div class="bar-row"><span class="bl">video_0</span><div class="bar-track"><div class="bar-fill" style="width:68.1%"></div></div><span class="bv">68.1%</span></div>
+          <div class="bar-row"><span class="bl">video_1</span><div class="bar-track"><div class="bar-fill" style="width:74.5%"></div></div><span class="bv">74.5%</span></div>
+          <div class="bar-row"><span class="bl">video_2</span><div class="bar-track"><div class="bar-fill" style="width:92.1%"></div></div><span class="bv">92.1%</span></div>
+        </div>
+        <div class="callout">Three videos, three different worlds: <b>video_2 is 92% empty</b>, so a naive whole-video holdout would give a wildly unrepresentative val set.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:24px;">
+      <h3>Sequence-safe train / val split</h3>
+      <p style="color:var(--slate); font-size:14px; margin-bottom:6px;">Split independently within each video, at the sequence level &mdash; every video represented in both sides, no adjacent-frame leakage.</p>
+      <div class="split-viz">
+        <div style="width:82.7%; background:var(--reef-dim); color:var(--foam);">train &middot; 19,444</div>
+        <div style="width:17.3%; background:var(--coral-dim); color:var(--foam);">val &middot; 4,057</div>
+      </div>
+      <div class="pillbar">
+        <span class="pill">&#10003; no sequence leakage</span>
+        <span class="pill">&#10003; no image leakage</span>
+        <span class="pill">&#10003; all frames accounted for</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pillar" id="preprocessing">
+  <div class="wrap">
+    <span class="frame-tag">FRAME_002</span>
+    <h2>Preprocessing: taming the empty frames</h2>
+    <p class="intro">Raw annotations arrive as COCO-style pixel boxes. Every frame is converted to normalized YOLO format &mdash; and because nearly 80% of frames are empty, how many of those we keep turned out to matter more than almost anything else.</p>
+
+    <div class="two-col">
+      <div class="card">
+        <h3>Negative-ratio experiment</h3>
+        <table class="data">
+          <tr><th>Ratio kept</th><th>mAP50</th><th>Gain</th></tr>
+          <tr><td>0.0 (positives only)</td><td>0.0084</td><td>baseline</td></tr>
+          <tr><td>1.0</td><td>0.0205</td><td>+2.4&times;</td></tr>
+          <tr><td>2.0</td><td>0.0495</td><td>+5.9&times;</td></tr>
+          <tr class="hl"><td>all negatives</td><td>0.0600</td><td>+7.1&times;</td></tr>
+        </table>
+        <div class="callout">Training on positives only starves the model of <b>background context</b> &mdash; it starts flagging coral texture as starfish. Keeping empty frames stabilizes precision dramatically.</div>
+      </div>
+
+      <div class="card">
+        <h3>COCO &rarr; YOLO conversion</h3>
+        <div class="kv-list">
+          <div class="kv"><span class="k">Input format</span><span class="v">x, y, w, h (px)</span></div>
+          <div class="kv"><span class="k">Output format</span><span class="v">x_c, y_c, w, h (0&ndash;1)</span></div>
+          <div class="kv"><span class="k">Out-of-bounds boxes</span><span class="v">clipped to frame</span></div>
+          <div class="kv"><span class="k">Zero-area results</span><span class="v">dropped</span></div>
+          <div class="kv"><span class="k">Classes</span><span class="v">1 &middot; starfish</span></div>
+        </div>
+        <div class="callout">Chosen for the final run: <b>ratio = 2.0</b> for fast iteration, with room to retrain at <b>all negatives</b> for a marginal final gain.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pillar" id="baseline">
+  <div class="wrap">
+    <span class="frame-tag">FRAME_003</span>
+    <h2>The baseline</h2>
+    <p class="intro">Before investing in a heavier architecture, a fast, deliberately unambitious model to establish a floor &mdash; and confirm the pipeline actually works end to end.</p>
+
+    <div class="two-col">
+      <div class="card">
+        <h3>Baseline config</h3>
+        <div class="kv-list">
+          <div class="kv"><span class="k">Model</span><span class="v">YOLOv8n</span></div>
+          <div class="kv"><span class="k">Image size</span><span class="v">320px</span></div>
+          <div class="kv"><span class="k">Epochs</span><span class="v">20</span></div>
+          <div class="kv"><span class="k">Negative ratio</span><span class="v">2.0</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Baseline result</h3>
+        <div class="bars">
+          <div class="bar-row"><span class="bl">mAP50</span><div class="bar-track"><div class="bar-fill" style="width:8.2%"></div></div><span class="bv">0.0508</span></div>
+          <div class="bar-row"><span class="bl">mAP50&#8209;95</span><div class="bar-track"><div class="bar-fill" style="width:4%"></div></div><span class="bv">0.0252</span></div>
+        </div>
+        <p style="color:var(--slate); font-size:13px; margin-top:16px;">Deliberately low &mdash; 320px is too coarse to resolve small, camouflaged starfish. This is the floor the final model needed to clear.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pillar" id="architecture">
+  <div class="wrap">
+    <span class="frame-tag">FRAME_004</span>
+    <h2>Final architecture</h2>
+    <p class="intro">Two changes drove the real gains: more resolution to resolve small targets, and enough training time for the model to actually converge.</p>
+
+    <div class="card">
+      <h3>Training config</h3>
+      <div class="kv-list">
+        <div class="kv"><span class="k">Model</span><span class="v">YOLO11s</span></div>
+        <div class="kv"><span class="k">Image size</span><span class="v">1280px</span></div>
+        <div class="kv"><span class="k">Batch size</span><span class="v">24</span></div>
+        <div class="kv"><span class="k">Max epochs</span><span class="v">60 (patience 10)</span></div>
+        <div class="kv"><span class="k">Stopped at</span><span class="v">epoch 44</span></div>
+        <div class="kv"><span class="k">Best checkpoint</span><span class="v">epoch 34</span></div>
+        <div class="kv"><span class="k">Optimizer</span><span class="v">SGD, lr0 0.01</span></div>
+      </div>
+    </div>
+
+    <div class="imgph">
+      <img src="outputs/yolo11s/results.png" alt="Training curves plot">
+    </div>
+    <p class="img-caption">Loss and metric curves across 44 epochs &mdash; box/cls/dfl loss, precision, recall, mAP50, mAP50&#8209;95</p>
+
+    <div class="callout" style="margin-top:24px;">320px &rarr; 1280px was the single biggest lever: starfish occupy a tiny fraction of each frame, and low resolution was silently destroying the signal before the model ever saw it.</div>
+  </div>
+</section>
+
+<section class="pillar" id="results">
+  <div class="wrap">
+    <span class="frame-tag">FRAME_005</span>
+    <h2>Results &amp; error analysis</h2>
+    <p class="intro">The headline number is strong. The interesting story is underneath it &mdash; this model is <em style="color:var(--reef); font-style:normal;">cautious</em>, not comprehensive.</p>
+
+    <div class="two-col">
+      <div class="card">
+        <h3>Best epoch (34) &mdash; validation</h3>
+        <div class="bars">
+          <div class="bar-row"><span class="bl">mAP50</span><div class="bar-track"><div class="bar-fill" style="width:61.9%"></div></div><span class="bv">0.619</span></div>
+          <div class="bar-row"><span class="bl">mAP50&#8209;95</span><div class="bar-track"><div class="bar-fill" style="width:36%"></div></div><span class="bv">0.360</span></div>
+          <div class="bar-row"><span class="bl">Precision</span><div class="bar-track"><div class="bar-fill coral" style="width:87.7%"></div></div><span class="bv">0.877</span></div>
+          <div class="bar-row"><span class="bl">Recall</span><div class="bar-track"><div class="bar-fill coral" style="width:55.9%"></div></div><span class="bv">0.559</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Confusion (normalized)</h3>
+        <div class="conf-grid">
+          <div class="conf-cell" style="background:rgba(31,160,151,0.28);">
+            <div class="pct" style="color:var(--reef);">52%</div>
+            <div class="lbl">true starfish &rarr; caught</div>
+          </div>
+          <div class="conf-cell" style="background:rgba(255,107,74,0.22);">
+            <div class="pct" style="color:var(--coral);">48%</div>
+            <div class="lbl">true starfish &rarr; missed</div>
+          </div>
+        </div>
+        <div class="callout">Precision (0.88) far outpaces recall (0.56): the model rarely cries wolf, but misses <b>nearly half</b> of real starfish &mdash; likely the smallest and most camouflaged ones.</div>
+      </div>
+    </div>
+
+    <div class="imgph" style="margin-top:24px;">
+      <img src="outputs/yolo11s/val_batch2_labels.jpg" alt="Ground-truth boxes on a validation batch">
+    </div>
+    <p class="img-caption">Ground truth &mdash; validation batch 2</p>
+
+    <div class="imgph" style="margin-top:20px;">
+      <img src="outputs/yolo11s/val_batch2_pred.jpg" alt="Model predictions on the same batch">
+    </div>
+    <p class="img-caption">Model predictions on the same batch</p>
+
+    <div class="card" style="margin-top:24px;">
+      <h3>Detection threshold</h3>
+      <p style="color:var(--slate); font-size:14px;">The F1-optimal confidence threshold sits at <b class="mono" style="color:var(--foam);">conf = 0.102</b> &mdash; well below YOLO&rsquo;s default of 0.25. Inference is run at this threshold rather than the default, or a meaningful share of correct low-confidence detections get silently discarded.</p>
+    </div>
+  </div>
+</section>
+
+<section class="pillar" id="try-it">
+  <div class="wrap">
+    <span class="frame-tag">FRAME_006</span>
+    <h2>Try the model</h2>
+    <p class="intro">Upload a reef photo and the model &mdash; running live in your browser, no server involved &mdash; will draw a box around anything it thinks is a crown-of-thorns starfish.</p>
+
+    <div class="card">
+      <input hidden type="file" id="file-input" accept="image/*">
+      <div id="drop-zone" class="imgph" style="cursor:pointer; aspect-ratio:16/9;">
+        <span class="tag">&#8595; Click to choose an image</span>
+        JPG or PNG &middot; ideally an underwater reef shot
+      </div>
+      <div id="canvas-wrap" style="display:none; margin-top:16px;">
+        <canvas id="detect-canvas" style="width:100%; border-radius:8px; display:block; background:#000;"></canvas>
+      </div>
+      <div style="display:flex; align-items:center; gap:14px; margin-top:18px; flex-wrap:wrap;">
+        <button id="run-btn" class="repo-link" style="cursor:pointer; background:none; font-family:'JetBrains Mono'; opacity:0.5;" disabled>&#9654; Run detection</button>
+        <span id="status" class="mono" style="font-size:12px; color:var(--slate);">Loading model&hellip;</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <span class="frame-tag">TEAM</span>
+  <h2 style="margin-bottom:0;">Group 5 &mdash; Computer Vision</h2>
+  <div class="team">
+    <div class="member"><div class="role">Data &amp; Baseline</div>Ruzanna Mkhitaryan</div>
+    <div class="member"><div class="role">Final Model</div>Anahit Mkrtumyan</div>
+    <div class="member"><div class="role">Inference &amp; Error Analysis</div>Eva Araratyan</div>
+  </div>
+  <a class="repo-link" href="https://github.com/RuzannaMkhitaryan/great-barrier-reef" target="_blank">&#8599; View the repository</a>
+  <p class="fine">TensorFlow &mdash; Help Protect the Great Barrier Reef &middot; Kaggle competition dataset &middot; built as a course final project.</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script>
+(function(){
+  const MODEL_PATH = './model/best.onnx';
+  const IMG_SIZE = 1280;          // must match the imgsz used when exporting to ONNX
+  const CONF_THRESH = 0.102;      // this model's F1-optimal threshold, not YOLO's 0.25 default
+  const IOU_THRESH = 0.45;
+  const CLASS_NAME = 'starfish';
+
+  const fileInput = document.getElementById('file-input');
+  const dropZone = document.getElementById('drop-zone');
+  const canvasWrap = document.getElementById('canvas-wrap');
+  const canvas = document.getElementById('detect-canvas');
+  const runBtn = document.getElementById('run-btn');
+  const statusEl = document.getElementById('status');
+  const ctx = canvas.getContext('2d');
+
+  let session = null;
+  let currentImage = null;
+
+  ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/';
+
+  async function loadModel(){
+    try{
+      session = await ort.InferenceSession.create(MODEL_PATH, { executionProviders: ['wasm'] });
+      statusEl.textContent = 'Model ready.';
+      if(currentImage){ runBtn.disabled = false; runBtn.style.opacity = 1; }
+    }catch(e){
+      statusEl.textContent = 'Could not load model/best.onnx — check the file is exported and placed correctly.';
+      console.error(e);
+    }
+  }
+  loadModel();
+
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const img = new Image();
+    img.onload = () => {
+      currentImage = img;
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      ctx.drawImage(img, 0, 0);
+      dropZone.style.display = 'none';
+      canvasWrap.style.display = 'block';
+      if(session){ runBtn.disabled = false; runBtn.style.opacity = 1; }
+      statusEl.textContent = 'Image loaded. Ready to run.';
+    };
+    img.src = URL.createObjectURL(file);
+  });
+
+  function letterbox(img, size){
+    const off = document.createElement('canvas');
+    off.width = size; off.height = size;
+    const octx = off.getContext('2d');
+    octx.fillStyle = 'rgb(114,114,114)';
+    octx.fillRect(0, 0, size, size);
+    const scale = Math.min(size / img.naturalWidth, size / img.naturalHeight);
+    const newW = Math.round(img.naturalWidth * scale);
+    const newH = Math.round(img.naturalHeight * scale);
+    const padX = Math.floor((size - newW) / 2);
+    const padY = Math.floor((size - newH) / 2);
+    octx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, padX, padY, newW, newH);
+    return { canvas: off, scale, padX, padY };
+  }
+
+  function preprocess(img){
+    const { canvas: lb, scale, padX, padY } = letterbox(img, IMG_SIZE);
+    const lctx = lb.getContext('2d');
+    const data = lctx.getImageData(0, 0, IMG_SIZE, IMG_SIZE).data;
+    const floatData = new Float32Array(IMG_SIZE * IMG_SIZE * 3);
+    const plane = IMG_SIZE * IMG_SIZE;
+    for(let i = 0; i < IMG_SIZE * IMG_SIZE; i++){
+      floatData[i]           = data[i*4]     / 255; // R
+      floatData[plane + i]   = data[i*4 + 1] / 255; // G
+      floatData[plane*2 + i] = data[i*4 + 2] / 255; // B
+    }
+    return { tensor: new ort.Tensor('float32', floatData, [1, 3, IMG_SIZE, IMG_SIZE]), scale, padX, padY };
+  }
+
+  function iou(a, b){
+    const x1 = Math.max(a.x1, b.x1), y1 = Math.max(a.y1, b.y1);
+    const x2 = Math.min(a.x2, b.x2), y2 = Math.min(a.y2, b.y2);
+    const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+    const areaA = (a.x2 - a.x1) * (a.y2 - a.y1);
+    const areaB = (b.x2 - b.x1) * (b.y2 - b.y1);
+    return inter / (areaA + areaB - inter);
+  }
+
+  function nms(boxes){
+    boxes.sort((a, b) => b.conf - a.conf);
+    const kept = [];
+    for(const box of boxes){
+      if(kept.every(k => iou(k, box) < IOU_THRESH)) kept.push(box);
+    }
+    return kept;
+  }
+
+  function postprocess(output, scale, padX, padY, origW, origH){
+    const dims = output.dims;          // expected [1, 5, N]
+    const N = dims[2];
+    const d = output.data;
+    const boxes = [];
+    for(let i = 0; i < N; i++){
+      const conf = d[4*N + i];
+      if(conf < CONF_THRESH) continue;
+      const cx = d[0*N + i], cy = d[1*N + i], w = d[2*N + i], h = d[3*N + i];
+      let x1 = (cx - w/2 - padX) / scale;
+      let y1 = (cy - h/2 - padY) / scale;
+      let x2 = (cx + w/2 - padX) / scale;
+      let y2 = (cy + h/2 - padY) / scale;
+      x1 = Math.max(0, Math.min(x1, origW));
+      y1 = Math.max(0, Math.min(y1, origH));
+      x2 = Math.max(0, Math.min(x2, origW));
+      y2 = Math.max(0, Math.min(y2, origH));
+      boxes.push({ x1, y1, x2, y2, conf });
+    }
+    return nms(boxes);
+  }
+
+  function drawBoxes(boxes){
+    ctx.drawImage(currentImage, 0, 0);
+    boxes.forEach(b => {
+      ctx.strokeStyle = '#FF6B4A';
+      ctx.lineWidth = Math.max(2, canvas.width / 400);
+      ctx.strokeRect(b.x1, b.y1, b.x2 - b.x1, b.y2 - b.y1);
+      const label = `${CLASS_NAME} ${b.conf.toFixed(2)}`;
+      ctx.font = `${Math.max(12, canvas.width/80)}px 'JetBrains Mono', monospace`;
+      const tw = ctx.measureText(label).width + 10;
+      const th = Math.max(18, canvas.width/45);
+      ctx.fillStyle = '#FF6B4A';
+      ctx.fillRect(b.x1 - 2, b.y1 - th, tw, th);
+      ctx.fillStyle = '#071620';
+      ctx.fillText(label, b.x1 + 3, b.y1 - th/4);
+    });
+  }
+
+  runBtn.addEventListener('click', async () => {
+    if(!session || !currentImage) return;
+    runBtn.disabled = true;
+    statusEl.textContent = 'Running inference\u2026';
+    await new Promise(r => setTimeout(r, 30)); // let UI paint before the heavy work
+    try{
+      const { tensor, scale, padX, padY } = preprocess(currentImage);
+      const inputName = session.inputNames[0];
+      const outputName = session.outputNames[0];
+      const results = await session.run({ [inputName]: tensor });
+      const boxes = postprocess(results[outputName], scale, padX, padY, currentImage.naturalWidth, currentImage.naturalHeight);
+      drawBoxes(boxes);
+      statusEl.textContent = `Found ${boxes.length} starfish${boxes.length === 1 ? '' : 's'}.`;
+    }catch(e){
+      statusEl.textContent = 'Inference failed — check console for details.';
+      console.error(e);
+    }
+    runBtn.disabled = false;
+  });
+})();
+</script>
+</body>
+</html>
