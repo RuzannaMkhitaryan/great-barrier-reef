@@ -1,381 +1,281 @@
-## Data Pipeline and Next Steps
+# Data Pipeline
 
-### Current Pipeline
+This document describes the complete data and model pipeline used for Crown-of-Thorns Starfish (COTS) detection in the Great Barrier Reef project.
 
-```text id="d8m5h2"
-Raw Kaggle Dataset
-        ↓
-EDA
-        ↓
-Sequence-level Train / Validation Split
-        ↓
-splits.csv
-        ↓
-Dataset Preparation
-        ↓
-Negative-frame Sampling
-        ↓
-COCO → YOLO Annotation Conversion
-        ↓
-YOLO Dataset Generation
-        ↓
-Preliminary YOLOv8 Training
-        ↓
-Negative-ratio Comparison
+The project is based on the Kaggle **TensorFlow — Help Protect the Great Barrier Reef** competition:
+
+https://www.kaggle.com/competitions/tensorflow-great-barrier-reef
+
+## 1. Exploratory Data Analysis
+
+Exploratory data analysis is performed in:
+
+```text
+notebooks/eda.ipynb
 ```
 
-### 1. Exploratory Data Analysis — Completed
+Main dataset findings:
 
-File:
+- **23,501** image frames
+- **3 videos**
+- **20 sequences**
+- Image resolution: **1280 × 720**
+- About **79.1%** of frames contain no annotated starfish
+- No duplicate `image_id` values were found
+- No missing image files were detected
 
-```text id="kflw32"
-eda.ipynb
+The high proportion of empty frames influenced both the train/validation splitting strategy and the decision to experiment with different amounts of negative/background training data.
+
+## 2. Train / Validation Split
+
+The canonical train/validation split is generated in:
+
+```text
+notebooks/train_val_split.ipynb
 ```
 
-Main findings:
+and stored in:
 
-* 23,501 frames
-* 3 videos
-* 20 sequences
-* high class imbalance
-* approximately 79% of frames contain no annotated starfish
-* different videos have different empty-frame distributions
-* image dimensions were checked
-* missing images and duplicate image IDs were checked
-
-These findings motivated the negative-frame sampling experiments.
-
-### 2. Train / Validation Split — Completed
-
-File:
-
-```text id="l62w1u"
-train_val_split.ipynb
-```
-
-The split is performed at the sequence level rather than individual-frame level.
-
-This prevents adjacent or near-duplicate frames from the same sequence from appearing in both training and validation sets.
-
-Multiple candidate sequence-level splits are generated for each video, and the most representative split is selected based on:
-
-* validation-set size
-* empty-frame distribution
-
-Output:
-
-```text id="gq7rfo"
+```text
 data/splits.csv
 ```
 
-Current split:
+The data is split at the **sequence level** instead of randomly by frame.
 
-```text id="57x7tp"
+Frames belonging to the same underwater sequence are visually and temporally related. Random frame-level splitting could therefore place very similar images in both training and validation sets and cause data leakage.
+
+`GroupShuffleSplit` is used to generate sequence-level splits while keeping complete sequences together.
+
+Final split:
+
+```text
 Train: 19,444 frames
-Val:    4,057 frames
+Validation: 4,057 frames
 ```
 
-### 3. Dataset Preparation — Completed
+The same validation set is preserved across experiments to ensure fair model comparison.
 
-File:
+## 3. Dataset Preparation
 
-```text id="pu9fq4"
-dataset.py
+Dataset preparation is implemented in:
+
+```text
+src/dataset.py
 ```
 
-Responsibilities:
+The preprocessing pipeline:
 
-```text id="79k0m4"
-train.csv + splits.csv
-        ↓
-parse annotations
-        ↓
-assign train / validation
-        ↓
-optionally sample negative training frames
-        ↓
-clip invalid/out-of-frame bounding boxes
-        ↓
-COCO → YOLO conversion
-        ↓
-create YOLO .txt labels
-        ↓
-create image symlinks
-        ↓
-generate data.yaml
+1. Loads the original Kaggle `train.csv`
+2. Parses bounding-box annotations
+3. Merges annotations with `data/splits.csv`
+4. Identifies positive and negative frames
+5. Optionally downsamples negative training frames
+6. Clips bounding boxes to valid image boundaries
+7. Converts annotations from COCO to YOLO format
+8. Creates YOLO label files
+9. Links images into train and validation directories
+10. Generates `data.yaml`
+
+The original bounding boxes use COCO format:
+
+```text
+x, y, width, height
 ```
 
-Validation data is never filtered.
+They are converted to normalized YOLO format:
 
-### 4. Negative-frame Experiments — Preliminary Stage Completed
-
-File:
-
-```text id="k9flcm"
-train.ipynb
+```text
+class_id x_center y_center width height
 ```
 
-Tested negative-to-positive ratios:
+The project contains one object class:
 
-```text id="4ouvkq"
-0.0
-1.0
-2.0
-None / all negatives
+```text
+0 → starfish
 ```
 
-Each experiment:
+Negative frames receive empty YOLO label files.
 
-```text id="9cydzq"
-cleans generated YOLO data
-        ↓
-loads fixed train/val split
-        ↓
-changes training negatives only
-        ↓
-creates YOLO dataset
-        ↓
-initializes fresh YOLOv8n
-        ↓
-trains
-        ↓
-evaluates on fixed validation set
+## 4. Negative-Frame Sampling
+
+Because most frames contain no annotated starfish, different negative-to-positive ratios were tested.
+
+The supported configurations are:
+
+```text
+0.0  → no negative frames
+1.0  → up to 1 negative per positive frame
+2.0  → up to 2 negatives per positive frame
+None → all available negative frames
 ```
 
-Preliminary results indicate that keeping more negative/background frames improves validation performance.
+Only the training set is downsampled. The validation set remains unchanged.
 
-The all-negative configuration produced the best result in the current short experiment.
+Experiments are documented in:
 
----
-
-# Next Steps
-
-### 5. Finalize the Negative-frame Strategy
-
-Do not treat the short 5-epoch experiment as the final model-selection result.
-
-Recommended candidates for longer experiments:
-
-```text id="x82y7m"
-ratio = None
-ratio = 2.0
+```text
+notebooks/train-yolov8n.ipynb
 ```
 
-Compare them again with longer training before choosing the final configuration.
+### Preliminary Results
 
-### 6. Increase Training Resolution
+| Negative ratio | Description | mAP@50 | mAP@50–95 |
+|---|---|---:|---:|
+| `0.0` | Positive frames only | 0.0084 | 0.0022 |
+| `1.0` | Up to 1 negative per positive | 0.0205 | 0.0101 |
+| `2.0` | Up to 2 negatives per positive | 0.0495 | 0.0212 |
+| `all` | All available negatives | **0.0600** | **0.0257** |
 
-The preliminary experiments use:
+The experiments showed that including background examples significantly improved detection performance.
 
-```text id="r6mt51"
-imgsz = 320
+## 5. Baseline Model
+
+A **YOLOv8n** model was trained as a baseline reference.
+
+The baseline experiment is available in:
+
+```text
+notebooks/baseline_model.ipynb
 ```
 
-Starfish can be relatively small objects, so future training should test higher resolutions such as:
+Main configuration:
 
-```text id="rly3y2"
-640
-1280
+- Model: **YOLOv8n**
+- Image size: **320**
+- Batch size: **32**
+- Epochs: **20**
+- Negative ratio: **2.0**
+
+Baseline results:
+
+| Metric | Score |
+|---|---:|
+| mAP@50 | 0.0508 |
+| mAP@50–95 | 0.0252 |
+
+The baseline checkpoint is stored externally because trained `.pt` model files are not tracked in Git:
+
+[Baseline checkpoint folder](https://drive.google.com/drive/folders/1xf0_AAXmX-Zf0HHk1QR14CI8TpzXakV4?usp=sharing)
+
+The checkpoint can be used for inference and comparison with the final model.
+
+## 6. Final Model Training
+
+After the preliminary YOLOv8 experiments, the final model was trained using **YOLO11s**.
+
+Final training is documented in:
+
+```text
+notebooks/train-final-model-yolo11s.ipynb
 ```
 
-Start with `640` because it provides a better balance between detail, GPU memory usage, and training speed.
+Reusable model configuration is defined in:
 
-### 7. Train for More Epochs
-
-Current ratio experiments use only a few epochs for fast comparison.
-
-For proper model training, increase the number of epochs, for example:
-
-```text id="v6eohc"
-30+
+```text
+src/model.py
 ```
 
-and use early stopping where appropriate.
+The final training setup uses:
 
-### 8. Improve Experiment Reproducibility
+- Pretrained **YOLO11s** weights
+- Transfer learning
+- Input image size of **1280**
+- SGD optimizer
+- Data augmentation
+- Early stopping
+- Model checkpointing
 
-Use a fixed training seed, for example:
+The higher input resolution helps preserve information about small COTS in underwater frames.
 
-```python id="q2l8c2"
-seed=42
+The best model checkpoint was obtained at **epoch 34**.
+
+## 7. Evaluation
+
+Evaluation utilities are implemented in:
+
+```text
+src/metrics.py
 ```
 
-in YOLO training so that ratio and model comparisons are more controlled.
+The main evaluation metric for the project is the **F2 score**.
 
-Keep the existing fixed:
+F2 gives more importance to recall than precision:
 
-```text id="1hjptc"
-train / validation split
+```text
+F2 = 5 × (Precision × Recall) / (4 × Precision + Recall)
 ```
 
-for all model comparisons.
+This is useful for COTS detection because missing an existing starfish is particularly important.
 
-### 9. Track More Validation Metrics
+### Final Validation Results
 
-Continue recording:
+| Metric | Score |
+|---|---:|
+| **F2** | **0.603** |
+| Precision | 0.877 |
+| Recall | 0.559 |
+| mAP@50 | 0.619 |
+| mAP@50–95 | 0.359 |
 
-```text id="i4pej3"
-mAP50
-mAP50-95
+The final YOLO11s model achieved high precision while maintaining moderate recall, resulting in an **F2 score of 0.603**.
+
+## 8. Prediction
+
+Inference on new images is implemented in:
+
+```text
+src/predict.py
 ```
 
-Also consider tracking:
+The prediction pipeline:
 
-```text id="vl0dru"
-precision
-recall
-training loss
-validation loss
-```
-
-This will make it easier to understand why one model performs better than another.
-
-### 10. Inspect Prediction Errors
-
-After obtaining a stronger model, visually inspect validation predictions.
-
-Focus on:
-
-```text id="loefle"
-false positives
-false negatives
-missed small starfish
-multiple-starﬁsh frames
-difficult reef backgrounds
-```
-
-This can guide later preprocessing or model changes.
-
-### 11. Model / Hyperparameter Experiments
-
-After establishing the baseline YOLOv8n pipeline, possible experiments include:
-
-```text id="4x17lr"
-YOLO model size
-image resolution
-batch size
-learning rate
-augmentation settings
-negative-frame ratio
-number of epochs
-```
-
-Change one major factor at a time where possible so results remain interpretable.
-
-### 12. Select the Final Model
-
-Choose the model based primarily on validation performance rather than training performance.
-
-Save:
-
-```text id="9ckm4q"
-best model weights
-training configuration
-negative ratio
-image size
-metrics
-```
-
-so the experiment can be reproduced.
-
-### 13. Inference Pipeline
-
-After model selection, implement inference on unseen frames.
-
-Expected flow:
-
-```text id="0qcnge"
+```text
 Input image
-    ↓
+     ↓
 Load trained YOLO model
-    ↓
-Run detection
-    ↓
-Bounding boxes + confidence scores
-    ↓
+     ↓
+Run inference
+     ↓
 Apply confidence threshold
-    ↓
-Final starfish detections
+     ↓
+Extract detections
+     ↓
+Bounding boxes + confidence scores
+     ↓
+Save visualized prediction
 ```
 
-### 14. Competition-style Evaluation / Submission
+Prediction information can also be written to:
 
-If the project intends to reproduce the original Kaggle task, the final stage can include:
+```text
+prediction_results.txt
+```
 
-```text id="dtj78t"
-test-video inference
+This file is generated during inference and is excluded from version control through `.gitignore`.
+
+Trained model weights such as `.pt` files are also kept outside the Git repository.
+
+## Pipeline Overview
+
+```text
+Raw Kaggle Dataset
         ↓
-prediction formatting
+Exploratory Data Analysis
         ↓
-competition-compatible output
-```
-
-This part has not yet been implemented in the current project files.
-
----
-
-## Full Project Flow
-
-```text id="vmxagq"
-RAW DATA
-   │
-   ▼
-EDA
-   │
-   ▼
-SEQUENCE-LEVEL SPLIT
-   │
-   ▼
-splits.csv
-   │
-   ▼
-DATASET PREPARATION
-   │
-   ├── negative sampling
-   ├── COCO → YOLO
-   ├── labels
-   ├── image links
-   └── data.yaml
-   │
-   ▼
-PRELIMINARY YOLO EXPERIMENTS
-   │
-   ▼
-SELECT PROMISING NEGATIVE RATIOS
-   │
-   ▼
-LONGER TRAINING
-   │
-   ├── higher resolution
-   ├── more epochs
-   └── reproducible settings
-   │
-   ▼
-MODEL COMPARISON
-   │
-   ▼
-ERROR ANALYSIS
-   │
-   ▼
-FINAL MODEL
-   │
-   ▼
-INFERENCE
-   │
-   ▼
-FINAL EVALUATION / SUBMISSION
-```
-
-## Current Project Status
-
-```text id="brzx8u"
-EDA                         ✅
-Train / validation split    ✅
-YOLO dataset preparation    ✅
-Negative-ratio experiment   ✅ preliminary
-Final training              ⏳
-Model selection             ⏳
-Error analysis              ⏳
-Inference pipeline          ⏳
-Final evaluation            ⏳
+Sequence-Level Train / Validation Split
+        ↓
+Dataset Preparation
+        ↓
+COCO → YOLO Annotation Conversion
+        ↓
+Negative-Frame Sampling Experiments
+        ↓
+YOLOv8n Baseline
+        ↓
+YOLO11s Final Model
+        ↓
+Evaluation
+(F2, Precision, Recall, mAP)
+        ↓
+Inference on New Images
 ```
