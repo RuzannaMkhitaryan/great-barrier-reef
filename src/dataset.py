@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-dataset.py — Data pipeline for Great Barrier Reef starfish detection (YOLOv8)
+Dataset preparation pipeline for Great Barrier Reef COTS detection.
 
-Prepares raw Kaggle annotations and images for Ultralytics YOLOv8 by:
-1. Merging raw metadata with cross-validation split definitions.
+Prepares raw Kaggle annotations and images for Ultralytics YOLO by:
+1. Merging raw metadata with train/validation split definitions.
 2. Downsampling empty (negative) training frames if requested.
-3. Converting COCO pixel coordinates into normalized YOLO format.
-4. Symlinking images and exporting target labels and data.yaml.
+3. Converting COCO bounding boxes to normalized YOLO format.
+4. Linking images and exporting labels and data.yaml.
 """
 
 import ast
