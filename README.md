@@ -146,6 +146,17 @@ src/model.py
 
 The current configuration uses transfer learning with pretrained YOLO11s weights, higher-resolution input, early stopping, and image augmentation.
 
+### Final YOLO11s Checkpoint
+
+The final trained YOLO11s checkpoint is available here:
+
+[Download final model checkpoint](https://drive.google.com/file/d/1Jnt6G-A5glUnfwgBp0nbs4rui6Sf9QK6/view?usp=sharing)
+
+After downloading the checkpoint, place it in:
+
+```text
+outputs/final.pt
+```
 ## Evaluation
 
 The **main evaluation metric for this project is F2 score**.
