@@ -198,6 +198,12 @@ The script loads the trained model, detects COTS, saves an image with predicted 
 
 Generated prediction logs and model checkpoints are not tracked in Git.
 
+## Error Analysis
+
+A small qualitative error analysis was performed on known-positive validation images to inspect correct detections, low-confidence predictions, and missed detections.
+
+See: [`docs/error_analysis.pdf`](docs/error_analysis.pdf)
+
 ## Project Structure
 
 ```text
