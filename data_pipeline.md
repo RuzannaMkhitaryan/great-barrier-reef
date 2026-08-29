@@ -114,7 +114,7 @@ Only the training set is downsampled. The validation set remains unchanged.
 Experiments are documented in:
 
 ```text
-notebooks/train-yolov8n.ipynb
+notebooks/negative_ratio_experiments_yolov8n.ipynb
 ```
 
 ### Preliminary Results
@@ -166,7 +166,7 @@ After the preliminary YOLOv8 experiments, the final model was trained using **YO
 Final training is documented in:
 
 ```text
-notebooks/train-final-model-yolo11s.ipynb
+notebooks/train_final_model_yolo11s.ipynb
 ```
 
 Reusable model configuration is defined in:
