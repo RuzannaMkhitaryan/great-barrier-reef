@@ -1,18 +1,21 @@
-# Data
-data/
+# Raw/generated data
+data/*
+!data/splits.csv
+
+# Images
 *.jpg
 *.jpeg
 *.png
-*.csv
-!sample_images/*.jpg
-!data/splits.csv
 
 # Model artifacts
 *.pt
 *.pth
-checkpoints/
+
+# Training outputs
 runs/
+outputs/
 wandb/
+checkpoints/
 
 # Python
 __pycache__/
@@ -21,8 +24,9 @@ __pycache__/
 venv/
 .env
 
+# Generated prediction logs
+prediction_results.txt
+visual_result_*.jpg
+
 # OS
 .DS_Store
-
-# log data
-prediction_results.txt
