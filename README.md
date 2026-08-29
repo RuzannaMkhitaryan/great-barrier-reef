@@ -83,7 +83,7 @@ There is one detection class:
 Because most frames contain no starfish, different negative-to-positive training ratios were tested with **YOLOv8n** in:
 
 ```text
-notebooks/train-yolov8n.ipynb
+notebooks/negative_ratio_experiments_yolov8n.ipynb
 ```
 
 | Negative ratio | Description                    |     mAP@50 |  mAP@50–95 |
@@ -135,7 +135,7 @@ After the initial YOLOv8 experiments, the project moved to **YOLO11s**, which pr
 Final-model training is documented in:
 
 ```text
-notebooks/train-final-model-yolo11s.ipynb
+notebooks/train_final_model_yolo11s.ipynb
 ```
 
 The reusable model configuration is defined in:
@@ -209,9 +209,9 @@ great-barrier-reef/
 ├── notebooks/
 │   ├── eda.ipynb
 │   ├── train_val_split.ipynb
-│   ├── train-yolov8n.ipynb
+│   ├── negative_ratio_experiments_yolov8n.ipynb
 │   ├── baseline_model.ipynb
-│   └── train-final-model-yolo11s.ipynb
+│   └── train_final_model_yolo11s.ipynb
 │
 ├── src/
 │   ├── dataset.py
