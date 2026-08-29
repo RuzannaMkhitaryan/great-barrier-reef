@@ -5,6 +5,7 @@ data/
 *.png
 *.csv
 !sample_images/*.jpg
+!data/splits.csv
 
 # Model artifacts
 *.pt
