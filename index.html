@@ -691,7 +691,7 @@
       const results = await session.run({ [inputName]: tensor });
       const boxes = postprocess(results[outputName], scale, padX, padY, currentImage.naturalWidth, currentImage.naturalHeight);
       drawBoxes(boxes);
-      statusEl.textContent = `Found ${boxes.length} starfish${boxes.length === 1 ? '' : 's'}.`;
+      statusEl.textContent = `Found ${boxes.length} starfish${boxes.length === 1 ? '' : 'es'}.`;
     }catch(e){
       statusEl.textContent = 'Inference failed — check console for details.';
       console.error(e);
