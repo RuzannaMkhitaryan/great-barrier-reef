@@ -202,7 +202,7 @@ Generated prediction logs and model checkpoints are not tracked in Git.
 
 A small qualitative error analysis was performed on known-positive validation images to inspect correct detections, low-confidence predictions, and missed detections.
 
-See: [`docs/error_analysis.pdf`](docs/error_analysis.pdf)
+See: [`docs/Error_Log.pdf`](docs/Error_Log.pdf)
 
 ## Project Structure
 
@@ -211,6 +211,9 @@ great-barrier-reef/
 │
 ├── data/
 │   └── splits.csv
+│
+├── docs/
+│   └── Error_Log.pdf
 │
 ├── notebooks/
 │   ├── eda.ipynb
