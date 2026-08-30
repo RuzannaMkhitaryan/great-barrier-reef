@@ -5,6 +5,9 @@ data/
 *.png
 *.csv
 !sample_images/*.jpg
+!assets/starfish/*.png
+!outputs/yolo11s/*.png
+!outputs/yolo11s/*.jpg
 
 # Model artifacts
 *.pth
