@@ -148,7 +148,10 @@
   .readout .rec .dot{width:6px; height:6px; border-radius:50%; background:var(--coral); animation:pulse 1.2s ease-in-out infinite;}
 
   /* ---------- section frame ---------- */
-  section.pillar{padding:72px 0; border-top:1px solid var(--line);}
+  section.pillar{padding:72px 0; border-top:1px solid var(--line); position:relative; overflow:hidden;}
+  .corner-starfish{
+    position:absolute; z-index:0; pointer-events:none; object-fit:contain;
+  }
   .frame-tag{
     font-family:'JetBrains Mono'; font-size:12px; color:var(--coral);
     letter-spacing:0.08em; margin-bottom:14px; display:block;
@@ -222,7 +225,7 @@
   .conf-cell .lbl{font-size:10px; color:var(--slate); margin-top:4px; text-align:center;}
 
   /* ---------- footer / team ---------- */
-  footer{padding:64px 0 80px; border-top:1px solid var(--line);}
+  footer{padding:64px 0 80px; border-top:1px solid var(--line); position:relative; overflow:hidden;}
   .team{display:flex; gap:40px; flex-wrap:wrap; margin:28px 0 40px;}
   .member{font-family:'JetBrains Mono'; font-size:13px;}
   .member .role{color:var(--reef); font-size:11px; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;}
@@ -232,12 +235,31 @@
   }
   .repo-link:hover{border-color:var(--reef);}
   .fine{color:var(--slate); font-size:12px; margin-top:30px;}
+
+  .starfish-field{
+    position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0;
+  }
+  .starfish-field img{
+    position:absolute; object-fit:contain;
+  }
+  .drift{ animation: drift 14s ease-in-out infinite; }
+  .drift.d2{ animation-duration:18s; animation-delay:-4s; }
+  .drift.d3{ animation-duration:11s; animation-delay:-8s; }
+  @keyframes drift{
+    0%,100%{ transform:translateY(0) rotate(0deg); }
+    50%{ transform:translateY(-14px) rotate(6deg); }
+  }
+  .mark .starfish-mark{ width:18px; height:18px; object-fit:contain; }
 </style>
 </head>
 <body>
 
 <div class="topbar">
-  <div class="mark"><span class="dot"></span> COTS&#8209;DETECT</div>
+  <div class="mark">
+    <img class="starfish-mark" src="assets/starfish/starfish-2.png" alt="">
+    COTS&#8209;DETECT
+    <span class="dot"></span>
+  </div>
   <nav>
     <a href="#data">Data</a>
     <a href="#preprocessing">Preprocessing</a>
@@ -249,6 +271,12 @@
 </div>
 
 <header class="hero wrap">
+  <div class="starfish-field">
+    <img class="drift" src="assets/starfish/starfish-1.png" style="top:10%; left:3%; width:70px; opacity:0.35;" alt="">
+    <img class="drift d2" src="assets/starfish/starfish-3.png" style="top:58%; left:8%; width:46px; opacity:0.22;" alt="">
+    <img class="drift d3" src="assets/starfish/starfish-4.png" style="top:26%; right:5%; width:60px; opacity:0.3;" alt="">
+    <img class="drift" src="assets/starfish/starfish-2.png" style="top:72%; right:12%; width:38px; opacity:0.2;" alt="">
+  </div>
   <span class="eyebrow">&#9673; Great Barrier Reef &middot; Object Detection</span>
   <h1>Finding <em>crown&#8209;of&#8209;thorns starfish</em> in 23,501 frames of open water.</h1>
   <p class="lede">A YOLO-based detection pipeline trained to spot a coral-eating predator across three dive videos &mdash; built, broken, and rebuilt over an 11-day sprint.</p>
@@ -275,7 +303,9 @@
     <div class="scanner">
       <div class="grid-overlay"></div>
       <div class="scan-line"></div>
-      <div class="bbox"></div>
+      <div class="bbox">
+        <img src="assets/starfish/starfish-1.png" style="width:100%; height:100%; object-fit:contain;" alt="">
+      </div>
       <div class="readout">
         <span>FRAME 0&#8209;1013 &middot; VIDEO_0</span>
         <span class="rec"><span class="dot"></span>DETECTING</span>
@@ -285,6 +315,7 @@
 </header>
 
 <section class="pillar" id="data">
+  <img class="corner-starfish drift" src="assets/starfish/starfish-3.png" style="top:30px; right:2%; width:90px; opacity:0.07;" alt="">
   <div class="wrap">
     <span class="frame-tag">FRAME_001</span>
     <h2>The problem & the data</h2>
@@ -330,6 +361,7 @@
 </section>
 
 <section class="pillar" id="preprocessing">
+  <img class="corner-starfish drift d2" src="assets/starfish/starfish-4.png" style="bottom:20px; left:1%; width:70px; opacity:0.06;" alt="">
   <div class="wrap">
     <span class="frame-tag">FRAME_002</span>
     <h2>Preprocessing: taming the empty frames</h2>
@@ -364,6 +396,7 @@
 </section>
 
 <section class="pillar" id="baseline">
+  <img class="corner-starfish drift d3" src="assets/starfish/starfish-2.png" style="top:40px; right:3%; width:60px; opacity:0.08;" alt="">
   <div class="wrap">
     <span class="frame-tag">FRAME_003</span>
     <h2>The baseline</h2>
@@ -392,6 +425,7 @@
 </section>
 
 <section class="pillar" id="architecture">
+  <img class="corner-starfish drift" src="assets/starfish/starfish-1.png" style="bottom:10px; right:1%; width:100px; opacity:0.06;" alt="">
   <div class="wrap">
     <span class="frame-tag">FRAME_004</span>
     <h2>Final architecture</h2>
@@ -420,6 +454,7 @@
 </section>
 
 <section class="pillar" id="results">
+  <img class="corner-starfish drift d2" src="assets/starfish/starfish-3.png" style="top:60px; left:2%; width:80px; opacity:0.07;" alt="">
   <div class="wrap">
     <span class="frame-tag">FRAME_005</span>
     <h2>Results &amp; error analysis</h2>
@@ -470,6 +505,7 @@
 </section>
 
 <section class="pillar" id="try-it">
+  <img class="corner-starfish drift d3" src="assets/starfish/starfish-4.png" style="bottom:30px; right:2%; width:75px; opacity:0.08;" alt="">
   <div class="wrap">
     <span class="frame-tag">FRAME_006</span>
     <h2>Try the model</h2>
@@ -493,6 +529,7 @@
 </section>
 
 <footer class="wrap">
+  <img class="corner-starfish drift" src="assets/starfish/starfish-2.png" style="top:10px; right:2%; width:65px; opacity:0.08;" alt="">
   <span class="frame-tag">TEAM</span>
   <h2 style="margin-bottom:0;">Group 5 &mdash; Computer Vision</h2>
   <div class="team">
@@ -507,7 +544,7 @@
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 <script>
 (function(){
-  const MODEL_PATH = './model/best.onnx';
+  const MODEL_PATH = './models/best.onnx';
   const IMG_SIZE = 1280;          // must match the imgsz used when exporting to ONNX
   const CONF_THRESH = 0.102;      // this model's F1-optimal threshold, not YOLO's 0.25 default
   const IOU_THRESH = 0.45;
