@@ -6,7 +6,7 @@ Great Barrier Reef Crown-of-Thorns Starfish detection project.
 from ultralytics import YOLO
 
 def load_model(pretrained_weights="yolo11s.pt"):
-     """
+    """
     Load a pretrained YOLO model for transfer learning.
     Args:
         pretrained_weights: Path or name of pretrained YOLO weights.
@@ -33,7 +33,7 @@ def get_train_config(
     hsv_v=0.3,
 ):
     
-     """
+    """
     Return the training hyperparameters for the YOLO model.
     Higher input resolution is used to improve detection of small COTS
     in underwater frames. Early stopping prevents unnecessary training
