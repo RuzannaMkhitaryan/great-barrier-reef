@@ -296,6 +296,10 @@
           <div class="num">0.360</div>
           <div class="label">Val mAP50&#8209;95</div>
         </div>
+        <div class="stat" style="border-left-color:var(--coral-dim);">
+          <div class="num" style="color:var(--coral);">0.603</div>
+          <div class="label">F2&#8209;score (Kaggle metric)</div>
+        </div>
       </div>
       <p style="color:var(--slate); font-size:13.5px; margin-top:18px;">YOLO11s &middot; 1280px &middot; trained to epoch 44, early&#8209;stopped from patience&#8209;10</p>
     </div>
@@ -468,6 +472,7 @@
           <div class="bar-row"><span class="bl">mAP50&#8209;95</span><div class="bar-track"><div class="bar-fill" style="width:36%"></div></div><span class="bv">0.360</span></div>
           <div class="bar-row"><span class="bl">Precision</span><div class="bar-track"><div class="bar-fill coral" style="width:87.7%"></div></div><span class="bv">0.877</span></div>
           <div class="bar-row"><span class="bl">Recall</span><div class="bar-track"><div class="bar-fill coral" style="width:55.9%"></div></div><span class="bv">0.559</span></div>
+          <div class="bar-row"><span class="bl">F2&#8209;score</span><div class="bar-track"><div class="bar-fill" style="width:60.3%; background:linear-gradient(90deg, var(--coral-dim), var(--coral));"></div></div><span class="bv">0.603</span></div>
         </div>
       </div>
 
@@ -496,6 +501,18 @@
       <img src="outputs/yolo11s/val_batch2_pred.jpg" alt="Model predictions on the same batch">
     </div>
     <p class="img-caption">Model predictions on the same batch</p>
+
+    <div class="card" style="margin-top:24px;">
+      <h3>F2&#8209;score &mdash; the actual competition metric</h3>
+      <p style="color:var(--slate); font-size:14px; margin-bottom:14px;">This Kaggle competition scores submissions on <b style="color:var(--foam);">F2, not mAP</b> &mdash; the metric that actually matters for comparison. F2 weighs recall four times more heavily than precision, reflecting that missing a real starfish is a costlier mistake than a false alarm.</p>
+      <div class="kv-list">
+        <div class="kv"><span class="k">Formula</span><span class="v">5&middot;P&middot;R / (4P + R)</span></div>
+        <div class="kv"><span class="k">Precision (P)</span><span class="v">0.877</span></div>
+        <div class="kv"><span class="k">Recall (R)</span><span class="v">0.559</span></div>
+        <div class="kv"><span class="k">F2&#8209;score</span><span class="v" style="color:var(--coral); font-weight:700;">0.603</span></div>
+      </div>
+      <div class="callout">F2 punishes low recall harder than mAP does &mdash; and given our recall is only 0.559, this is the more honest single number for judging the model against the competition's own standard.</div>
+    </div>
 
     <div class="card" style="margin-top:24px;">
       <h3>Detection threshold</h3>
@@ -691,7 +708,7 @@
       const results = await session.run({ [inputName]: tensor });
       const boxes = postprocess(results[outputName], scale, padX, padY, currentImage.naturalWidth, currentImage.naturalHeight);
       drawBoxes(boxes);
-      statusEl.textContent = `Found ${boxes.length} starfish${boxes.length === 1 ? '' : 'es'}.`;
+      statusEl.textContent = `Found ${boxes.length} starfish${boxes.length === 1 ? '' : 's'}.`;
     }catch(e){
       statusEl.textContent = 'Inference failed — check console for details.';
       console.error(e);
